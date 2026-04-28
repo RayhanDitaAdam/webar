@@ -12,7 +12,8 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
   const [stripDownloading, setStripDownloading] = useState(false);
 
   const voucherCode = "BERELAX-GIFT-2026";
-  const shareLink = "https://berelax.ar/album/" + (userData?.username?.toLowerCase().replace(/\s+/g, '-') || 'player');
+  const shareLink = "https://webar-alpha.vercel.app/";
+  const qrCodeUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(shareLink)}`;
 
   const handleLevel6Complete = () => {
     if (userData) {
@@ -214,21 +215,31 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
           <div className="bg-white border-4 border-slate-900 p-6 sm:p-10 rounded-[3rem] shadow-[16px_16px_0px_0px_rgba(15,23,42,1)] max-w-md w-full relative my-8">
             <button onClick={() => setShowShareMock(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full border-2 border-slate-900 hover:bg-rose-100 transition-colors"><FiX /></button>
             
-            <div className="text-center mb-8">
-              <h3 className="text-3xl font-black mb-2">Photobooth Strip 📸</h3>
-              <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Share your progress!</p>
+            <div className="text-center mb-6">
+              <h3 className="text-3xl font-black mb-2">Share & Invite 🚀</h3>
+              <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Let others join the relax!</p>
             </div>
 
-            {/* Photobooth Preview */}
-            <div className="bg-slate-100 border-4 border-slate-900 p-4 rounded-[2rem] mb-8 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] max-h-[50vh] overflow-y-auto">
+            {/* QR Code & Link Section */}
+            <div className="bg-emerald-50 border-4 border-slate-900 p-6 rounded-[2rem] mb-8 flex flex-col items-center gap-4 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)]">
+              <div className="bg-white p-3 border-4 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
+                <img src={qrCodeUrl} alt="QR Code" className="w-32 h-32" />
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Scan to play</p>
+                <code className="text-sm font-black text-emerald-600 bg-white px-3 py-1 rounded-full border-2 border-slate-900">{shareLink}</code>
+              </div>
+            </div>
+
+            {/* Photobooth Preview (Mini) */}
+            <div className="bg-slate-100 border-4 border-slate-900 p-4 rounded-[2rem] mb-8 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] max-h-[30vh] overflow-y-auto">
               <div className="bg-white p-4 flex flex-col gap-4">
-                <div className="text-center font-black text-slate-900 border-b-2 border-slate-100 pb-2">BE RELAX AR</div>
+                <div className="text-center font-black text-slate-900 border-b-2 border-slate-100 pb-2">PHOTOMEMORY</div>
                 {album.filter(i => i.type === 'photo').slice(0, 4).map((item, idx) => (
-                  <div key={idx} className="border-4 border-slate-900 rounded-lg overflow-hidden aspect-[4/3] bg-slate-200">
+                  <div key={idx} className="border-2 border-slate-900 rounded-lg overflow-hidden aspect-[4/3]">
                     <img src={item.url} alt="Strip" className="w-full h-full object-cover" />
                   </div>
                 ))}
-                <div className="text-center font-bold text-slate-400 text-xs py-2">{userData?.username || 'Player'}</div>
               </div>
             </div>
 
