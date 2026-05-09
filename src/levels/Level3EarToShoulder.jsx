@@ -63,13 +63,22 @@ const Level2Content = ({ metrics, levelStarted, setIsLevelComplete }) => { // No
         {/* Left Target (Shoulder Position) */}
         <div className={`relative transition-all duration-300 ${targetSide === 'left' ? 'scale-110 opacity-100' : 'scale-90 opacity-30'}`}>
           {targetSide === 'left' && (
-            <svg className="absolute inset-[-15px] w-[calc(100%+30px)] h-[calc(100%+30px)] -rotate-90">
+            <svg 
+              viewBox="0 0 100 100"
+              className="absolute inset-[-15px] w-[calc(100%+30px)] h-[calc(100%+30px)] -rotate-90"
+            >
               <circle
-                cx="50%" cy="50%" r="46%"
+                cx="50" cy="50" r="46"
+                fill="none" stroke="#e2e8f0" strokeWidth="6"
+              />
+              <circle
+                cx="50" cy="50" r="46"
                 fill="none" stroke="#60a5fa" strokeWidth="6"
-                strokeDasharray="300"
-                strokeDashoffset={300 - (300 * progress) / 100}
+                strokeDasharray="289"
+                strokeDashoffset={289 - (289 * progress) / 100}
                 strokeLinecap="round"
+                className="transition-all duration-150"
+                style={{ opacity: progress > 0 ? 1 : 0 }}
               />
             </svg>
           )}
@@ -84,13 +93,24 @@ const Level2Content = ({ metrics, levelStarted, setIsLevelComplete }) => { // No
         {/* Right Target (Shoulder Position) */}
         <div className={`relative transition-all duration-300 ${targetSide === 'right' ? 'scale-110 opacity-100' : 'scale-90 opacity-30'}`}>
           {targetSide === 'right' && (
-            <svg className="absolute inset-[-15px] w-[calc(100%+30px)] h-[calc(100%+30px)] -rotate-90">
+            <svg 
+              viewBox="0 0 100 100"
+              className="absolute inset-[-15px] w-[calc(100%+30px)] h-[calc(100%+30px)] -rotate-90"
+            >
+              {/* Track Ring */}
               <circle
-                cx="50%" cy="50%" r="46%"
+                cx="50" cy="50" r="46"
+                fill="none" stroke="#e2e8f0" strokeWidth="6"
+                className="opacity-50"
+              />
+              {/* Progress Fill */}
+              <circle
+                cx="50" cy="50" r="46"
                 fill="none" stroke="#a855f7" strokeWidth="6"
-                strokeDasharray="300"
-                strokeDashoffset={300 - (300 * progress) / 100}
+                strokeDasharray="289"
+                strokeDashoffset={289 - (289 * progress) / 100}
                 strokeLinecap="round"
+                style={{ opacity: progress > 0 ? 1 : 0 }}
               />
             </svg>
           )}

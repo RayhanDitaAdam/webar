@@ -53,11 +53,11 @@ const Level6Content = ({ metrics, levelStarted, setIsLevelComplete }) => {
       if (isAggressive) {
         driftDurationRef.current = 800 + Math.random() * 1000; // Berlangsung 0.8s - 1.8s
         const targetDir = ballRef.current >= 0 ? 1 : -1; // Incar gelas terdekat
-        driftRef.current = targetDir * (0.15 + Math.random() * 0.10); // Dorongan agresif diturunin biar imbang (0.15 - 0.25)
+        driftRef.current = targetDir * (0.12 + Math.random() * 0.08); // Dorongan agresif (0.12 - 0.20)
       } else {
         driftDurationRef.current = 500 + Math.random() * 2000;
-        // Kekuatan dorongan normal/nyantai (-0.15 sampai +0.15)
-        driftRef.current = (Math.random() - 0.5) * 0.15; 
+        // Kekuatan dorongan normal/nyantai (-0.12 sampai +0.12)
+        driftRef.current = (Math.random() - 0.5) * 0.12; 
       }
     }
 
@@ -68,7 +68,7 @@ const Level6Content = ({ metrics, levelStarted, setIsLevelComplete }) => {
     // ada kemungkinan 3% tiap frame sistem tiba-tiba berubah pikiran dan menarik bola ke arah sebaliknya (gocekan).
     if ((ball > 0.6 && driftRef.current > 0) || (ball < -0.6 && driftRef.current < 0)) {
       if (Math.random() < 0.03) {
-        driftRef.current = -driftRef.current * 1.5; // Gocekan tiba-tiba narik kenceng ke arah sebaliknya
+        driftRef.current = -driftRef.current * 0.8; // Gocekan lebih pelan biar nggak kaget banget
         driftTimerRef.current = now;
         driftDurationRef.current = 800; // Gocekan berlangsung bentar aja
       }

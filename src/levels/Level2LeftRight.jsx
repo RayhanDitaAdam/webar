@@ -65,18 +65,29 @@ const Level2Content = ({ metrics, levelStarted, setIsLevelComplete }) => {
         <div className={`relative transition-all duration-300 ${currentTarget === 'left' ? 'scale-110 opacity-100' : 'scale-90 opacity-30'}`}>
           {/* Progress Circle (SVG) */}
           {currentTarget === 'left' && (
-            <svg className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] -rotate-90">
+            <svg 
+              viewBox="0 0 100 100"
+              className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] -rotate-90"
+            >
+              {/* Track Ring */}
               <circle
-                cx="50%"
-                cy="50%"
-                r="48%"
+                cx="50" cy="50" r="48"
+                fill="none" stroke="#e2e8f0" strokeWidth="4"
+                className="opacity-50"
+              />
+              {/* Progress Fill */}
+              <circle
+                cx="50"
+                cy="50"
+                r="48"
                 fill="none"
                 stroke="#10b981"
                 strokeWidth="4"
-                strokeDasharray="300"
-                strokeDashoffset={300 - (300 * progressPercent) / 100}
+                strokeDasharray="301"
+                strokeDashoffset={301 - (301 * progressPercent) / 100}
                 strokeLinecap="round"
                 className="transition-all duration-100"
+                style={{ opacity: progressPercent > 0 ? 1 : 0 }}
               />
             </svg>
           )}
@@ -92,18 +103,29 @@ const Level2Content = ({ metrics, levelStarted, setIsLevelComplete }) => {
         <div className={`relative transition-all duration-300 ${currentTarget === 'right' ? 'scale-110 opacity-100' : 'scale-90 opacity-30'}`}>
           {/* Progress Circle (SVG) */}
           {currentTarget === 'right' && (
-            <svg className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] -rotate-90">
+            <svg 
+              viewBox="0 0 100 100"
+              className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] -rotate-90"
+            >
+              {/* Track Ring */}
               <circle
-                cx="50%"
-                cy="50%"
-                r="48%"
+                cx="50" cy="50" r="48"
+                fill="none" stroke="#e2e8f0" strokeWidth="4"
+                className="opacity-50"
+              />
+              {/* Progress Fill */}
+              <circle
+                cx="50"
+                cy="50"
+                r="48"
                 fill="none"
                 stroke="#f43f5e"
                 strokeWidth="4"
-                strokeDasharray="300"
-                strokeDashoffset={300 - (300 * progressPercent) / 100}
+                strokeDasharray="301"
+                strokeDashoffset={301 - (301 * progressPercent) / 100}
                 strokeLinecap="round"
                 className="transition-all duration-100"
+                style={{ opacity: progressPercent > 0 ? 1 : 0 }}
               />
             </svg>
           )}
