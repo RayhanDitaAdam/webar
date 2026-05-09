@@ -2,23 +2,25 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameState } from '../game/GameStateContext';
 import { LevelWrapper } from '../components/LevelWrapper';
 import { LevelCompleteOverlay } from '../components/LevelCompleteOverlay';
-import { FiBriefcase, FiAlertTriangle } from 'react-icons/fi';
+import { playSuccessSound, playPhaseCompleteSound } from '../utils/audio';
+import { IoFootball } from 'react-icons/io5';
+import { FiArchive } from 'react-icons/fi';
 
-const Level5Content = ({ metrics }) => {
+const Level5Content = ({ metrics, levelStarted, setIsLevelComplete }) => {
   const { completeLevel } = useGameState();
-  const [dodged, setDodged] = useState(0);
-  const [isHit, setIsHit] = useState(false);
+  const [headers, setHeaders] = useState(0);
+  const [isScored, setIsScored] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [objects, setObjects] = useState([]);
-  
-  const TARGET_DODGES = 10;
+
+  const TARGET_CATCHES = 10;
   const reqRef = useRef(null);
   const lastSpawnRef = useRef(Date.now());
-  const objectsRef = useRef([]); // Use ref for game loop to avoid stale closure
-  const dodgedRef = useRef(0);
+  const objectsRef = useRef([]);
+  const headersRef = useRef(0);
 
-  const HIT_THRESHOLD_X = 0.06;
-  const HIT_THRESHOLD_Y = 0.08;
+  const CATCH_THRESHOLD_X = 0.08;
+  const CATCH_THRESHOLD_Y = 0.08;
 
   const metricsRef = useRef(metrics);
   useEffect(() => {
@@ -26,66 +28,64 @@ const Level5Content = ({ metrics }) => {
   }, [metrics]);
 
   const gameLoop = useCallback(() => {
-    if (isComplete || !metricsRef.current?.nose) return;
+    if (isComplete || !metricsRef.current?.visualNose) return;
 
     const now = Date.now();
     let currentObjects = [...objectsRef.current];
 
-    // Spawn new object every 1.5 seconds
-    if (now - lastSpawnRef.current > 1500 && currentObjects.length < 3) {
+    // Spawn a new ball every 2.2 seconds, max 4 on screen
+    if (now - lastSpawnRef.current > 2200 && currentObjects.length < 4) {
       currentObjects.push({
         id: now,
-        x: 0.2 + Math.random() * 0.6, // between 0.2 and 0.8
-        y: -0.1,
-        speed: 0.005 + Math.random() * 0.003
+        x: 0.15 + Math.random() * 0.7,
+        y: -0.15,
+        speed: 0.010 + Math.random() * 0.005, // made them fall faster
       });
       lastSpawnRef.current = now;
     }
 
-    // Update positions & check collisions
-    const visualNose = metricsRef.current.visualNose;
+    const nose = metricsRef.current.visualNose;
     let hitDetected = false;
 
     currentObjects = currentObjects.filter(obj => {
       obj.y += obj.speed;
 
-      // Collision check
-      // obj.x is visually rendered at `1 - obj.x`, but visualNose.x is already mapped to HTML space
-      const realDx = Math.abs((1 - obj.x) - visualNose.x);
-      const realDy = Math.abs(obj.y - visualNose.y);
+      const realDx = Math.abs((1 - obj.x) - nose.x);
+      const realDy = Math.abs(obj.y - nose.y);
 
-      if (realDx < HIT_THRESHOLD_X && realDy < HIT_THRESHOLD_Y) {
+      if (realDx < CATCH_THRESHOLD_X && realDy < CATCH_THRESHOLD_Y) {
         hitDetected = true;
-        return false; // Remove object on hit
-      }
+        headersRef.current += 1;
+        setHeaders(headersRef.current);
 
-      // Passed the bottom (dodged)
-      if (obj.y > 1.1) {
-        dodgedRef.current += 1;
-        setDodged(dodgedRef.current);
-        if (dodgedRef.current >= TARGET_DODGES) {
+        if (headersRef.current >= TARGET_CATCHES) {
+          playSuccessSound();
           setIsComplete(true);
+          if (setIsLevelComplete) setIsLevelComplete(true);
           completeLevel(5);
+        } else {
+          playPhaseCompleteSound();
         }
-        return false; // Remove
+        return false;
       }
 
-      return true; // Keep
+      if (obj.y > 1.2) return false;
+
+      return true;
     });
 
     objectsRef.current = currentObjects;
     setObjects(currentObjects);
 
     if (hitDetected) {
-      setIsHit(true);
-      // Optional: deduct dodge count or just shake screen
-      setTimeout(() => setIsHit(false), 500); // Reset hit state after animation
+      setIsScored(true);
+      setTimeout(() => setIsScored(false), 400);
     }
 
     if (!isComplete) {
       reqRef.current = requestAnimationFrame(gameLoop);
     }
-  }, [isComplete, completeLevel]); // Removed metrics from dependencies
+  }, [isComplete, completeLevel]);
 
   useEffect(() => {
     if (!isComplete) {
@@ -96,60 +96,81 @@ const Level5Content = ({ metrics }) => {
     };
   }, [gameLoop, isComplete]);
 
+  const nosePos = metrics?.visualNose;
+
   return (
     <>
-      <div className={`absolute inset-0 pointer-events-none transition-transform ${isHit ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
-        
-        {/* Hit Overlay */}
-        <div className={`absolute inset-0 bg-rose-500/30 transition-opacity duration-200 ${isHit ? 'opacity-100' : 'opacity-0'}`} />
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Basket on Nose */}
+        {nosePos && !isComplete && (
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 z-30"
+            style={{
+              left: `${nosePos.x * 100}%`,
+              top: `${nosePos.y * 100}%`,
+            }}
+          >
+            <FiArchive
+              className={`w-7 h-7 sm:w-9 sm:h-9 transition-all duration-150 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.3)] ${
+                isScored ? 'scale-125 text-emerald-300' : 'text-white'
+              }`}
+            />
+          </div>
+        )}
 
-        {/* Falling Objects */}
+        {/* Falling Balls */}
         {objects.map(obj => (
-          <div 
+          <div
             key={obj.id}
             className="absolute -translate-x-1/2 -translate-y-1/2"
             style={{
-              left: `${(1 - obj.x) * 100}%`, // Mirror X
-              top: `${obj.y * 100}%`
+              left: `${(1 - obj.x) * 100}%`,
+              top: `${obj.y * 100}%`,
             }}
           >
-            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-400 border-4 border-slate-900 text-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
-              <FiBriefcase className="w-8 h-8 sm:w-10 sm:h-10" />
+            <div className="p-2.5 sm:p-3 rounded-full bg-white border-4 border-slate-900 text-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
+              <IoFootball className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* HUD */}
-      <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-white border-4 border-slate-900 px-8 py-4 rounded-full shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
-        <div className="text-center">
-          <p className="text-slate-900 text-xs tracking-widest uppercase font-black mb-1">Dodged</p>
-          <p className="text-3xl font-black text-slate-900">{dodged} <span className="text-lg text-slate-500">/ {TARGET_DODGES}</span></p>
+      {/* Floating Progress (follows nose) */}
+      {nosePos && !isComplete && (
+        <div
+          className="absolute pointer-events-none transition-all duration-150 ease-out z-40 flex flex-col items-center"
+          style={{
+            left: `${nosePos.x * 100}%`,
+            top: `${(nosePos.y + 0.1) * 100}%`,
+            transform: `translate(-50%, 0)`,
+          }}
+        >
+          <div
+            className={`bg-white border-2 border-slate-900 px-4 py-1.5 rounded-full shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] flex items-center gap-2 transition-all ${
+              isScored ? 'scale-125 border-emerald-500 bg-emerald-50' : 'scale-100'
+            }`}
+          >
+            <span className="text-sm font-black text-slate-900 leading-none">{headers}</span>
+            <span className="text-xs font-black text-slate-300 leading-none">/</span>
+            <span className="text-sm font-black text-slate-400 leading-none">{TARGET_CATCHES}</span>
+          </div>
+          <div className="mt-1 bg-slate-900 text-white text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-tighter shadow-[1px_1px_0px_0px_rgba(15,23,42,1)]">
+            Catches
+          </div>
         </div>
-        {isHit && <FiAlertTriangle className="w-10 h-10 text-rose-500 animate-pulse absolute -right-16" />}
-      </div>
+      )}
 
       {isComplete && <LevelCompleteOverlay levelNum={5} nextLevelUnlocked={true} />}
-
-      {/* Adding custom shake animation via inline style block */}
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-10px) rotate(-1deg); }
-          50% { transform: translateX(10px) rotate(1deg); }
-          75% { transform: translateX(-10px) rotate(-1deg); }
-        }
-      `}</style>
     </>
   );
 };
 
 export const Level5Dodge = () => {
   return (
-    <LevelWrapper 
-      levelNum={5} 
-      title="Suitcase Dodge" 
-      instruction="Move your head left and right to dodge the falling suitcases. Dodge 10 suitcases!"
+    <LevelWrapper
+      levelNum={5}
+      title="Basket Catch"
+      instruction="Catch the falling soccer balls with the basket on your nose! Move your head to position the basket."
     >
       <LevelContentWrapper />
     </LevelWrapper>

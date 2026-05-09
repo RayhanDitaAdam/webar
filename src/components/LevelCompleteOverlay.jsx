@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameState } from '../game/GameStateContext';
+import { playLevelCompleteSound } from '../utils/audio';
 import { FiCheckCircle, FiArrowRight, FiHome, FiGift, FiCopy, FiCheck, FiShare2, FiX } from 'react-icons/fi';
 import { DataCollectionModal } from './DataCollectionModal';
 
-export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
+export const LevelCompleteOverlay = ({ levelNum }) => {
   const { startLevel, goToMenu, userData, saveUserData, album } = useGameState();
   const [showVoucher, setShowVoucher] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showShareMock, setShowShareMock] = useState(false);
-  const [stripDownloading, setStripDownloading] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const voucherCode = "BERELAX-GIFT-2026";
   const shareLink = "https://webar-alpha.vercel.app/";
-  const qrCodeUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(shareLink)}`;
+
+  useEffect(() => {
+    playLevelCompleteSound();
+  }, []);
 
   const handleLevel6Complete = () => {
     if (userData) {
@@ -50,78 +53,8 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
     }
   };
 
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
-    alert("Album link copied to clipboard!");
-  };
-
-  const downloadPhotobooth = () => {
-    const photos = album.filter(item => item.type === 'photo').slice(0, 4);
-    if (photos.length === 0) return;
-
-    setStripDownloading(true);
-    
-    // Create high-res canvas for photobooth strip
-    const canvas = document.createElement('canvas');
-    const padding = 40;
-    const imgWidth = 600;
-    const imgHeight = 450;
-    const stripWidth = imgWidth + (padding * 2);
-    const stripHeight = (imgHeight * photos.length) + (padding * (photos.length + 2)) + 100; // Extra space for header/footer
-
-    canvas.width = stripWidth;
-    canvas.height = stripHeight;
-    const ctx = canvas.getContext('2d');
-
-    // Draw background (white strip)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, stripWidth, stripHeight);
-    
-    // Draw header
-    ctx.fillStyle = '#0f172a'; // slate-900
-    ctx.font = 'black 40px Fredoka';
-    ctx.textAlign = 'center';
-    ctx.fillText("BE RELAX AR", stripWidth / 2, padding + 40);
-
-    let currentY = padding + 100;
-
-    const drawPhotos = async () => {
-      for (const photo of photos) {
-        const img = new Image();
-        img.src = photo.url;
-        await new Promise(resolve => {
-          img.onload = () => {
-            // Draw photo
-            ctx.drawImage(img, padding, currentY, imgWidth, imgHeight);
-            // Draw border
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(padding, currentY, imgWidth, imgHeight);
-            
-            currentY += imgHeight + padding;
-            resolve();
-          };
-        });
-      }
-
-      // Footer
-      ctx.fillStyle = '#94a3b8'; // slate-400
-      ctx.font = 'bold 24px Fredoka';
-      ctx.fillText(userData?.username || 'Player', stripWidth / 2, currentY);
-
-      // Download
-      const link = document.createElement('a');
-      link.download = `BeRelax-Photobooth-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      setStripDownloading(false);
-    };
-
-    drawPhotos();
-  };
-
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm animate-in fade-in duration-500 overflow-hidden">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white overflow-hidden pointer-events-auto">
       
       {/* Gift Animation Layer */}
       <div className="absolute inset-0 pointer-events-none">
@@ -130,7 +63,7 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
         </div>
       </div>
 
-      <div className="bg-[#f8f9fa] border-4 border-slate-900 p-8 sm:p-12 rounded-[3rem] shadow-[12px_12px_0px_0px_rgba(15,23,42,1)] max-w-sm w-full text-center transform animate-in zoom-in-95 duration-500 delay-150 relative z-10">
+      <div className="bg-[#f8f9fa] border-4 border-slate-900 p-8 sm:p-12 rounded-[3rem] shadow-[12px_12px_0px_0px_rgba(15,23,42,1)] max-w-sm w-full text-center transform relative z-10">
         
         {/* Animated Icon */}
         <div className="w-24 h-24 bg-emerald-100 rounded-full border-4 border-slate-900 flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] animate-bounce">
@@ -145,7 +78,7 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
         </p>
 
         {showVoucher ? (
-          <div className="mb-8 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="mb-8">
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Your Reward Voucher</p>
             <div className="bg-white border-4 border-dashed border-slate-900 p-4 rounded-2xl flex items-center justify-between gap-4">
               <code className="text-lg font-black text-emerald-600">{voucherCode}</code>
@@ -161,7 +94,7 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
         ) : null}
 
         <div className="flex flex-col gap-4 pointer-events-auto">
-          {nextLevelUnlocked && levelNum < 6 && (
+          {levelNum < 6 && (
             <button 
               onClick={() => startLevel(levelNum + 1)}
               className="w-full py-4 rounded-full bg-emerald-400 border-4 border-slate-900 text-slate-900 font-black text-lg transition-transform hover:-translate-y-1 active:translate-y-0 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:shadow-none flex items-center justify-center gap-2"
@@ -179,13 +112,37 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
             </button>
           )}
 
-          {levelNum === 6 && album.length > 0 && (
-            <button 
-              onClick={() => setShowShareMock(true)}
-              className="w-full py-4 rounded-full bg-amber-400 border-4 border-slate-900 text-slate-900 font-black text-lg transition-transform hover:-translate-y-1 active:translate-y-0 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:shadow-none flex items-center justify-center gap-2"
-            >
-              Share Album <FiShare2 />
-            </button>
+          {levelNum === 6 && (
+            <>
+              <button 
+                onClick={() => setShowQR(prev => !prev)}
+                className="w-full py-4 rounded-full bg-amber-400 border-4 border-slate-900 text-slate-900 font-black text-lg transition-transform hover:-translate-y-1 active:translate-y-0 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:shadow-none flex items-center justify-center gap-2"
+              >
+                <FiShare2 /> Share
+              </button>
+
+              {showQR && (
+                <div 
+                  className="flex flex-col items-center gap-3 bg-white border-4 border-dashed border-slate-900 p-5 rounded-3xl"
+                  style={{
+                    animationName: 'qrBounceIn',
+                    animationDuration: '0.5s',
+                    animationTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    animationFillMode: 'both',
+                  }}
+                >
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Scan to Play</p>
+                  <div className="bg-white p-2 border-4 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareLink)}`} 
+                      alt="QR Code" 
+                      className="w-36 h-36 rounded-lg" 
+                    />
+                  </div>
+                  <code className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border-2 border-emerald-200">{shareLink}</code>
+                </div>
+              )}
+            </>
           )}
 
           <button 
@@ -210,62 +167,16 @@ export const LevelCompleteOverlay = ({ levelNum, nextLevelUnlocked }) => {
         />
       )}
 
-      {showShareMock && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/90 p-4 animate-in fade-in zoom-in-95 duration-300 overflow-y-auto">
-          <div className="bg-white border-4 border-slate-900 p-6 sm:p-10 rounded-[3rem] shadow-[16px_16px_0px_0px_rgba(15,23,42,1)] max-w-md w-full relative my-8">
-            <button onClick={() => setShowShareMock(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full border-2 border-slate-900 hover:bg-rose-100 transition-colors"><FiX /></button>
-            
-            <div className="text-center mb-6">
-              <h3 className="text-3xl font-black mb-2">Share & Invite 🚀</h3>
-              <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Let others join the relax!</p>
-            </div>
-
-            {/* QR Code & Link Section */}
-            <div className="bg-emerald-50 border-4 border-slate-900 p-6 rounded-[2rem] mb-8 flex flex-col items-center gap-4 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)]">
-              <div className="bg-white p-3 border-4 border-slate-900 rounded-2xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
-                <img src={qrCodeUrl} alt="QR Code" className="w-32 h-32" />
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Scan to play</p>
-                <code className="text-sm font-black text-emerald-600 bg-white px-3 py-1 rounded-full border-2 border-slate-900">{shareLink}</code>
-              </div>
-            </div>
-
-            {/* Photobooth Preview (Mini) */}
-            <div className="bg-slate-100 border-4 border-slate-900 p-4 rounded-[2rem] mb-8 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] max-h-[30vh] overflow-y-auto">
-              <div className="bg-white p-4 flex flex-col gap-4">
-                <div className="text-center font-black text-slate-900 border-b-2 border-slate-100 pb-2">PHOTOMEMORY</div>
-                {album.filter(i => i.type === 'photo').slice(0, 4).map((item, idx) => (
-                  <div key={idx} className="border-2 border-slate-900 rounded-lg overflow-hidden aspect-[4/3]">
-                    <img src={item.url} alt="Strip" className="w-full h-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={copyShareLink}
-                className="py-4 rounded-2xl bg-white border-4 border-slate-900 text-slate-900 font-black flex items-center justify-center gap-2 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none"
-              >
-                <FiShare2 /> Copy Link
-              </button>
-              <button 
-                onClick={downloadPhotobooth}
-                disabled={stripDownloading}
-                className="py-4 rounded-2xl bg-emerald-400 border-4 border-slate-900 text-slate-900 font-black flex items-center justify-center gap-2 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none disabled:opacity-50"
-              >
-                {stripDownloading ? "..." : "Download"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style>{`
         @keyframes gift-bounce {
           0%, 100% { transform: translateY(0) scale(1); }
           50% { transform: translateY(-20px) scale(1.1); }
+        }
+        @keyframes qrBounceIn {
+          0% { opacity: 0; transform: scale(0.3) translateY(-10px); }
+          50% { opacity: 1; transform: scale(1.08) translateY(2px); }
+          75% { transform: scale(0.95); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
         }
       `}</style>
     </div>

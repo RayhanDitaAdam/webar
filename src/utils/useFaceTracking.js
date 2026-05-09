@@ -78,6 +78,13 @@ export const useFaceTracking = (drawMesh = false) => {
     const predict = () => {
       if (!videoRef.current || !faceLandmarker || !isMounted) return;
 
+      // Ensure video is playing and has dimensions to avoid ROI errors
+      if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+        requestRef.current = requestAnimationFrame(predict);
+        return;
+      }
+
+
       const startTimeMs = performance.now();
       const results = faceLandmarker.detectForVideo(videoRef.current, startTimeMs);
 
@@ -99,8 +106,9 @@ export const useFaceTracking = (drawMesh = false) => {
         const yawRatio = distToLeft / distToRight;
         
         let yaw = 'center';
-        if (yawRatio < 0.25) yaw = 'left';
-        else if (yawRatio > 4.0) yaw = 'right';
+        if (yawRatio < 0.25) yaw = 'right';
+        else if (yawRatio > 4.0) yaw = 'left';
+
 
         // --- PITCH (Up/Down) ---
         // Using relative Y distances: nose-to-chin vs top-to-nose
@@ -110,9 +118,9 @@ export const useFaceTracking = (drawMesh = false) => {
         
         let pitch = 'center';
         // When looking up, topToNoseDist decreases, noseToChinDist increases. Ratio decreases.
-        if (pitchRatio < 0.6) pitch = 'up';
+        if (pitchRatio < 0.75) pitch = 'up';
         // When looking down, topToNoseDist increases, noseToChinDist decreases. Ratio increases.
-        else if (pitchRatio > 1.3) pitch = 'down';
+        else if (pitchRatio > 1.2) pitch = 'down';
 
         // --- ROLL (Tilt) ---
         const dy = rightEye.y - leftEye.y;

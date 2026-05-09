@@ -2,33 +2,31 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useGameState } from '../game/GameStateContext';
 import { LevelWrapper } from '../components/LevelWrapper';
 import { LevelCompleteOverlay } from '../components/LevelCompleteOverlay';
+import { playSuccessSound, playPhaseCompleteSound } from '../utils/audio';
 import { FiSmile } from 'react-icons/fi';
 
-const Level3Content = ({ metrics }) => {
+
+const Level2Content = ({ metrics, levelStarted, setIsLevelComplete }) => { // Note: Should have been Level3Content, but keeping consistent with level logic
   const { completeLevel } = useGameState();
-  const [targetSide, setTargetSide] = useState('left'); // 'left', 'right', 'done'
+  const [targetSide, setTargetSide] = useState('left');
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const holdStartRef = useRef(null);
-  const REQUIRED_HOLD_MS = 5000; // 5 seconds
+  
+  const REQUIRED_HOLD_MS = 3000; // Reduced to 3s for better mobile UX
+  const TILT_THRESHOLD = 0.04;
 
   useEffect(() => {
     if (isComplete || !metrics || !metrics.landmarks) return;
 
-    // Recalculate tilt specifically for this level to be safe
     const leftEye = metrics.landmarks[33];
     const rightEye = metrics.landmarks[263];
     const dy = rightEye.y - leftEye.y; 
     
-    // In selfie camera:
-    // User tilts LEFT shoulder -> User's left eye (33) goes DOWN (y increases). Right eye (263) goes UP (y decreases).
-    // So dy = rightEye.y - leftEye.y will be NEGATIVE.
-    // User tilts RIGHT shoulder -> dy will be POSITIVE.
-    
-    const tiltThreshold = 0.05; // Adjust this threshold based on testing
     let currentTilt = 'center';
-    if (dy < -tiltThreshold) currentTilt = 'left';
-    if (dy > tiltThreshold) currentTilt = 'right';
+    // Swapped left/right to fix inversion
+    if (dy < -TILT_THRESHOLD) currentTilt = 'right';
+    else if (dy > TILT_THRESHOLD) currentTilt = 'left';
 
     if (currentTilt === targetSide) {
       if (!holdStartRef.current) {
@@ -40,73 +38,110 @@ const Level3Content = ({ metrics }) => {
 
       if (currentProgress >= 100) {
         if (targetSide === 'left') {
+          playPhaseCompleteSound();
           setTargetSide('right');
           setProgress(0);
           holdStartRef.current = null;
         } else if (targetSide === 'right') {
-          setTargetSide('done');
+          playSuccessSound();
           setIsComplete(true);
+          if (setIsLevelComplete) setIsLevelComplete(true);
           completeLevel(3);
         }
       }
     } else {
       holdStartRef.current = null;
-      setProgress(Math.max(0, progress - 2)); // Decay progress slowly
+      setProgress(prev => Math.max(0, prev - 1.5)); // Decay progress
     }
 
-  }, [metrics, isComplete, targetSide, progress, completeLevel]);
+  }, [metrics, isComplete, targetSide, completeLevel]);
 
   return (
     <>
-      <div className="absolute inset-0 pointer-events-none flex items-end justify-between px-16 sm:px-32 pb-32">
+      <div className="absolute inset-0 pointer-events-none flex items-end justify-between px-12 sm:px-32 pb-40">
         
-        {/* Left Shoulder Target */}
-        <div className="flex flex-col items-center">
-          <div className={`transition-all duration-300 ${targetSide === 'left' ? 'scale-125 opacity-100' : 'scale-100 opacity-40'} ${targetSide === 'right' || targetSide === 'done' ? 'grayscale' : ''}`}>
-            <div className={`p-6 rounded-full border-4 transition-colors duration-300 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] ${targetSide === 'left' && progress > 0 ? 'border-slate-900 bg-blue-300 text-slate-900' : 'border-slate-400 bg-white text-slate-400'}`}>
-              <FiSmile className="w-12 h-12 sm:w-16 sm:h-16" />
-            </div>
-          </div>
-          {/* Progress Bar for Left */}
+        {/* Left Target (Shoulder Position) */}
+        <div className={`relative transition-all duration-300 ${targetSide === 'left' ? 'scale-110 opacity-100' : 'scale-90 opacity-30'}`}>
           {targetSide === 'left' && (
-            <div className="mt-6 w-24 bg-white rounded-full h-4 border-2 border-slate-900 overflow-hidden shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
-              <div className="bg-blue-400 h-full transition-all duration-100 ease-out border-r-2 border-slate-900" style={{ width: `${progress}%` }} />
-            </div>
+            <svg className="absolute inset-[-15px] w-[calc(100%+30px)] h-[calc(100%+30px)] -rotate-90">
+              <circle
+                cx="50%" cy="50%" r="46%"
+                fill="none" stroke="#60a5fa" strokeWidth="6"
+                strokeDasharray="300"
+                strokeDashoffset={300 - (300 * progress) / 100}
+                strokeLinecap="round"
+              />
+            </svg>
           )}
-          {targetSide !== 'left' && <div className="mt-6 h-4" />}
+          <div className={`p-8 rounded-full border-4 transition-colors duration-300 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] ${targetSide === 'left' && progress > 0 ? 'border-slate-900 bg-blue-300 text-slate-900' : 'border-slate-400 bg-white text-slate-400'}`}>
+            <FiSmile className="w-12 h-12 sm:w-16 sm:h-16" />
+          </div>
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full whitespace-nowrap shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+            {targetSide === 'left' ? 'LEFT SHOULDER' : 'DONE'}
+          </div>
         </div>
 
-        {/* Right Shoulder Target */}
-        <div className="flex flex-col items-center">
-          <div className={`transition-all duration-300 ${targetSide === 'right' ? 'scale-125 opacity-100' : 'scale-100 opacity-40'} ${targetSide === 'done' ? 'grayscale' : ''}`}>
-            <div className={`p-6 rounded-full border-4 transition-colors duration-300 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] ${targetSide === 'right' && progress > 0 ? 'border-slate-900 bg-purple-300 text-slate-900' : 'border-slate-400 bg-white text-slate-400'}`}>
-              <FiSmile className="w-12 h-12 sm:w-16 sm:h-16" />
-            </div>
-          </div>
-          {/* Progress Bar for Right */}
+        {/* Right Target (Shoulder Position) */}
+        <div className={`relative transition-all duration-300 ${targetSide === 'right' ? 'scale-110 opacity-100' : 'scale-90 opacity-30'}`}>
           {targetSide === 'right' && (
-            <div className="mt-6 w-24 bg-white rounded-full h-4 border-2 border-slate-900 overflow-hidden shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
-              <div className="bg-purple-400 h-full transition-all duration-100 ease-out border-r-2 border-slate-900" style={{ width: `${progress}%` }} />
-            </div>
+            <svg className="absolute inset-[-15px] w-[calc(100%+30px)] h-[calc(100%+30px)] -rotate-90">
+              <circle
+                cx="50%" cy="50%" r="46%"
+                fill="none" stroke="#a855f7" strokeWidth="6"
+                strokeDasharray="300"
+                strokeDashoffset={300 - (300 * progress) / 100}
+                strokeLinecap="round"
+              />
+            </svg>
           )}
+          <div className={`p-8 rounded-full border-4 transition-colors duration-300 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] ${targetSide === 'right' && progress > 0 ? 'border-slate-900 bg-purple-300 text-slate-900' : 'border-slate-400 bg-white text-slate-400'}`}>
+            <FiSmile className="w-12 h-12 sm:w-16 sm:h-16" />
+          </div>
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full whitespace-nowrap shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
+            {targetSide === 'right' ? 'RIGHT SHOULDER' : 'WAIT'}
+          </div>
         </div>
       </div>
+
+      {/* Floating Progress (Follows Head) */}
+      {metrics?.visualHeadTop && levelStarted && !isComplete && (
+        <div 
+          className="absolute pointer-events-none transition-all duration-150 ease-out z-50 flex flex-col items-center"
+          style={{
+            left: `${metrics.visualHeadTop.x * 100}%`,
+            top: `${metrics.visualHeadTop.y * 100}%`,
+            transform: `translate(-50%, 120%)`,
+
+          }}
+        >
+          <div className="bg-white border-2 border-slate-900 px-3 py-1 rounded-full shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${progress > 0 ? 'bg-blue-500 animate-ping' : 'bg-slate-300'}`} />
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Stretch:</span>
+            <span className="text-sm font-black text-slate-900">{targetSide === 'left' ? '1' : '2'} / 2</span>
+          </div>
+        </div>
+      )}
+
+
 
       {isComplete && <LevelCompleteOverlay levelNum={3} nextLevelUnlocked={true} />}
     </>
   );
 };
 
+const Level3Content = Level2Content; // Renaming for clarity internally
+
 export const Level3EarToShoulder = () => {
   return (
     <LevelWrapper 
       levelNum={3} 
       title="Ear-to-Shoulder" 
-      instruction="Tilt your head until your ear touches your left shoulder (Hold 5s), then right shoulder (Hold 5s)."
+      instruction="Gently tilt your head toward your left shoulder, then your right shoulder."
     >
-      <LevelContentWrapper />
+      <Level3Content />
     </LevelWrapper>
   );
 };
+
 
 const LevelContentWrapper = (props) => <Level3Content {...props} />;

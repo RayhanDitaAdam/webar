@@ -3,8 +3,10 @@ import { useGameState } from '../game/GameStateContext';
 import { LevelWrapper } from '../components/LevelWrapper';
 import { LevelCompleteOverlay } from '../components/LevelCompleteOverlay';
 import { FiLoader } from 'react-icons/fi';
+import { playSuccessSound, playPhaseCompleteSound } from '../utils/audio';
 
-const Level4Content = ({ metrics }) => {
+const Level4Content = ({ metrics, levelStarted, setIsLevelComplete }) => {
+
   const { completeLevel } = useGameState();
   const [progressIdx, setProgressIdx] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -19,11 +21,16 @@ const Level4Content = ({ metrics }) => {
     const centerY = 0.5;
 
     for (let i = 0; i < NUM_PARTICLES; i++) {
-      const angle = (i * 2 * Math.PI) / NUM_PARTICLES - Math.PI / 2; // Start from top
+      const angle = (i * 2 * Math.PI) / NUM_PARTICLES - Math.PI / 2; // Math clockwise is actually counter-clockwise, but let's just reverse the sign if needed.
+      // Wait, if I want it clockwise on screen (where Y increases downwards), 
+      // angle increasing means clockwise if we use (cos, sin).
+      // But mirrored X means we need to be careful.
+      // Let's just use -i to reverse it.
+      const reverseAngle = (-i * 2 * Math.PI) / NUM_PARTICLES - Math.PI / 2;
       pts.push({
         id: i,
-        x: centerX + radiusX * Math.cos(angle),
-        y: centerY + radiusY * Math.sin(angle)
+        x: centerX + radiusX * Math.cos(reverseAngle),
+        y: centerY + radiusY * Math.sin(reverseAngle)
       });
     }
     return pts;
@@ -36,18 +43,20 @@ const Level4Content = ({ metrics }) => {
       const target = particles[progressIdx];
       const visualNose = metrics.visualNose;
       
-      // visualNose matches HTML coordinates. The target is rendered at `1 - target.x` (mirrored).
       const dx = visualNose.x - (1 - target.x);
       const dy = visualNose.y - target.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Hitbox tolerance
       if (dist < 0.08) {
         const nextIdx = progressIdx + 1;
         setProgressIdx(nextIdx);
         if (nextIdx >= NUM_PARTICLES) {
+          playSuccessSound();
           setIsComplete(true);
+          if (setIsLevelComplete) setIsLevelComplete(true);
           completeLevel(4);
+        } else {
+          playPhaseCompleteSound();
         }
       }
     }
@@ -66,7 +75,7 @@ const Level4Content = ({ metrics }) => {
               key={p.id}
               className={`absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${isCurrentTarget ? 'scale-150 animate-pulse' : 'scale-100'}`}
               style={{
-                left: `${(1 - p.x) * 100}%`, // Mirror X because video is mirrored scale-x-[-1]
+                left: `${(1 - p.x) * 100}%`,
                 top: `${p.y * 100}%`,
               }}
             >
@@ -81,12 +90,31 @@ const Level4Content = ({ metrics }) => {
         
       </div>
 
-      <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex flex-col items-center">
-        <div className="bg-white border-4 border-slate-900 px-6 py-3 rounded-full shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] flex items-center gap-4">
-          <FiLoader className="w-6 h-6 text-emerald-500 animate-spin" />
-          <span className="text-xl font-black font-mono text-slate-900">{progressIdx} / {NUM_PARTICLES}</span>
+      {/* Floating Progress (Follows Head) */}
+      {metrics?.visualHeadTop && !isComplete && (
+        <div 
+          className="absolute pointer-events-none transition-all duration-150 ease-out z-40 flex flex-col items-center"
+          style={{
+            left: `${metrics.visualHeadTop.x * 100}%`,
+            top: `${metrics.visualHeadTop.y * 100}%`,
+            transform: `translate(-50%, 120%)`, 
+          }}
+        >
+          <div className="bg-white border-2 border-slate-900 px-4 py-1.5 rounded-full shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] flex items-center gap-3">
+            <FiLoader className="w-4 h-4 text-emerald-600 animate-spin" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-black text-slate-900 leading-none">{progressIdx}</span>
+              <span className="text-xs font-black text-slate-200 leading-none">/</span>
+              <span className="text-sm font-black text-slate-400 leading-none">{NUM_PARTICLES}</span>
+            </div>
+          </div>
+          <div className="mt-1 bg-slate-900 text-white text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">
+            Voyage Progress
+          </div>
         </div>
-      </div>
+      )}
+
+
 
       {isComplete && <LevelCompleteOverlay levelNum={4} nextLevelUnlocked={true} />}
     </>
